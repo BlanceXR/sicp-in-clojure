@@ -68,14 +68,14 @@
       (p (sine (/ angle 3.0) precision)))))
 
 ;;1.16
-(defn expo
+(defn ^BigInteger expo
   "calculate the exponent"
   [b n]
   (letfn [(iter [a b n]
             (cond (= n 0) a
-                  (even? n) (recur a (* b b) (/ n 2))
+                  (even? n) (recur a (* b b) (/ n (biginteger 2)))
                   :else (recur (* a b) b (dec n))))]
-    (iter 1 b n)))
+    (iter (biginteger 1) b n)))
 
 ;;1.19
 (defn fib
@@ -90,12 +90,19 @@
   (let [T (matrix [[1 1] [1 0]])]
     (first (first (* (expo (matrix [[1 1] [1N 0]]) n) (matrix [[1 0]]))))))
 
-(defn fib
-  "even faster implementation of fib can compute up to 1475th fib number"
-  [n]
-  (let [phi (/ (inc (Math/sqrt 5)) 2)]
-    (Math/floor (+ (/ 1 2) (/ (expo phi n) (Math/sqrt 5))))))
+;; (defn fib
+;;   "even faster implementation of fib can compute up to 1475th fib number"
+;;   [n]
+;;   (let [phi (/ (inc (Math/sqrt 5N)) 2N)]
 
 
+;;1.41
+(defn double
+  "apply f twice"
+  [f]
+  (fn [x] (f (f x))))
 
-;;1.20
+(defn compose
+  "comp reimplemented version"
+  [f g]
+  (fn [x] (f (g x))))
