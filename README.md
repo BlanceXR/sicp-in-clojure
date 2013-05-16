@@ -1,13 +1,20 @@
-# sicp
 
-A Clojure library designed to ... well, that part is up to you.
+# sicp
+my answer to exersices in sicp (work in progress).
+
 
 ## Usage
 
-FIXME
+well, they are listed under src/sicp directory.
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 
 
 Distributed under the Eclipse Public License, the same as Clojure.
+=======
+sicp-in-clojure
+===============
+
+
+
