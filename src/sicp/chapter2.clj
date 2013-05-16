@@ -7,9 +7,11 @@
             [clojure.core.matrix.operators :refer :all ]
             [alembic.still :as deps]
             [clojure.math.combinatorics :as combo]
-            [clojure.math.numeric-tower :refer :all]
+;            [clojure.math.numeric-tower :exclude [sqrt] :refer :all]
             [clojure.tools.trace :refer :all]
-            [incanter.infix :refer :all]))
+            [incanter.infix :refer :all]
+            [clojure.pprint :refer :all]
+            [clojure.repl :refer :all]))
 
 
 ;;ex 2.1
@@ -268,3 +270,50 @@
                                        (do-expo (base exp) (dec (exponent exp))))
         :else (println "error occured")))
 ;;TODO: simplify ther final version
+(defn find-hi
+  "find the pos of lowest operator"
+  [exp]
+  (let [pre-table {'+ 0, '- 0, '* 1, '/ 1, \^ 3}
+        cmp (fn [a b] (cond (<= (pre-table (first a))
+                               (pre-table (first b)))
+                            (if (< (second a) (second b)) -1 1)
+                            :else -1))
+        postion-map (-> (map-indexed #(identity [%2 %1]) exp)
+                        reverse
+                        flatten
+                        ((partial apply hash-map)))]
+    (second (first (sort cmp (filter #(pre-table (first %))
+                                     postion-map))))))
+(defn indices
+  "nice function that find the indicie of matching predicate in coll"
+  [pred coll]
+  (keep-indexed #(when (pred %2) %1) coll))
+
+(defn find-hi
+  "doc-string"
+  [exp]
+  (let [pre-table #{'+ '- '* '/ \^}]
+    ;; (second (first
+    ;;         (filter #(pre-table (first %))
+    ;;                 (map-indexed #(identity [%2 %1]) exp))))
+    (first (keep-indexed #(when (pre-table %2) %1) exp))))
+
+(defn in2pre
+  "infix to prefix"
+  [exp]
+  (cond (not (coll? exp)) exp
+        (= 1 (count exp)) (in2pre (first exp))
+        :else (let [hi (find-hi exp)]
+                (if  (nil? hi)
+                  exp
+                  (let [[hd [op & tl]] (split-at hi exp)]
+                    (list op (in2pre hd) (in2pre tl)))))))
+
+(def text-exp '(1 + 2 + 3 * 5 * 4))
+
+(defn count-string
+  "split the string than count "
+  [re s]
+  (count (re-seq re s)))
+
+;;ex
