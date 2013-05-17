@@ -84,33 +84,6 @@
   (reduce (fn [curr higher]
             (+ higher (* curr x)))
           coeff))
-(defn dot
-  "dot product"
-  [v w]
-  (apply + (map * v w)))
-
-(defn m-*
-  "matrix mult vector"
-  [m v]
-  (for [w m]
-    (dot w v)))
-(defn transpose
-  "transpose a matrix"
-  [m]
-  (apply map vector m))
-
-(defn m-*-m
-  "matrix mult matrix"
-  [m1 m2]
-  (for [w m1]
-    (for [v (transpose m2)]
-      (dot w v))))
-
-(defn p-matrix
-  "print out a matrix"
-  [m]
-  (doseq [v m]
-    (apply println v)))
 ;;2.39
 (reduce #(cons %2 %1) [] [1 2 3])
 ;;2.40
@@ -121,16 +94,6 @@
         j (range n)
         :when (< 0 i j n)]
     [i j]))
-
-(defn sum-three
-  "lalala"
-  [n s]
-  (for [i (range n)
-        j (range n)
-        k (range n)
-        :when (and (= s (+ i j k))
-                   (< k j i n))]
-    [i j k]))
 
 (defn sum-three [n s]
   (for [i (range n)
@@ -172,14 +135,6 @@
                               (map (fn [k] [i j k]) (range n))))
                     (range n)))
           (range n)))
-(defn perm
-  "asdl;k"
-  [xs]
-  (if (seq xs)
-    (mapcat (fn [x] (map (fn [y] (cons x y))
-                         (perm (remove #{x} xs))))
-            xs)
-    '(())))
 
 ;;2.42
 (defn safe?
@@ -207,10 +162,8 @@
                 (queen-cols (- k 1))))))]
     (queen-cols n)))
 
-;;debugging parts of expressions
-(defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
 
-;;ex2.56
+;;ex2.56 & 2.57
 (defn do-sum [a b & xs]
   (if (< 0 (count xs))
     (apply list '+ (do-sum a b) xs)
@@ -269,7 +222,7 @@
                                        (exponent exp)
                                        (do-expo (base exp) (dec (exponent exp))))
         :else (println "error occured")))
-;;TODO: simplify ther final version
+;;ex 2.58
 (defn find-hi
   "find the pos of lowest operator"
   [exp]
@@ -284,18 +237,11 @@
                         ((partial apply hash-map)))]
     (second (first (sort cmp (filter #(pre-table (first %))
                                      postion-map))))))
-(defn indices
-  "nice function that find the indicie of matching predicate in coll"
-  [pred coll]
-  (keep-indexed #(when (pred %2) %1) coll))
 
 (defn find-hi
   "doc-string"
   [exp]
   (let [pre-table #{'+ '- '* '/ \^}]
-    ;; (second (first
-    ;;         (filter #(pre-table (first %))
-    ;;                 (map-indexed #(identity [%2 %1]) exp))))
     (first (keep-indexed #(when (pre-table %2) %1) exp))))
 
 (defn in2pre
@@ -309,11 +255,77 @@
                   (let [[hd [op & tl]] (split-at hi exp)]
                     (list op (in2pre hd) (in2pre tl)))))))
 
-(def text-exp '(1 + 2 + 3 * 5 * 4))
 
-(defn count-string
-  "split the string than count "
-  [re s]
-  (count (re-seq re s)))
 
-;;ex
+;;ex 2.59 clojure.set/union
+(defn union-set
+  "find the union of two sets"
+  [s1 s2]
+  (cond (not (seq s1)) s2
+        (not (seq s2)) s1
+        (s1 (first s2)) (recur s1 (rest s2))
+        :else (recur (conj s1 (first s2)) (rest s2))))
+(defn union-set
+  "better version"
+  [s1 s2]
+  (reduce conj s1 s2))
+
+;;my take of binary tree implementation
+(defn make-tree [v] {:v v :l nil :r nil})
+
+(defn insert [tree v]
+  (if (nil? tree)
+    (make-tree v)
+    (case (compare v (tree :v))
+      -1 (assoc tree :l (insert (:l tree) v))
+      0 tree
+      1 (assoc tree :r (insert (:r tree) v)))))
+
+(defn next-root
+  "find the node in tree that is the next biggest in tree"
+  [tree]
+  (if-not (or (tree :r) (tree :l)) (tree :v)
+          (next-root (tree :l))))
+
+(defn rm-node
+  "remove node from tree"
+  [tree v]
+  (if (nil? tree)
+    tree
+    (case (compare v (tree :v))
+      -1 (assoc tree :l (rm-node (:l tree) v)) ;;insert left if smaller than
+      1 (assoc tree :r (rm-node (:r tree) v))  ;;insert right if greater than
+      0 (if-not (tree :r)        ;;if tree right is empty,
+          (tree :l)              ;;return left
+          (if-not ((tree :r) :l) ;;if right tree left branch is empty
+            (assoc (tree :r) :l (tree :l))  ;conj the left to right's left
+            (assoc tree                 ;otherwise swap next root up
+              :v (next-root (tree :r))
+              :l (tree :l)
+              :r (rm-node (tree :r))))))))
+
+(defn in-order
+  "traverse a tree in orderly"
+  [tree]
+  (->> (if tree
+         (list (tree :v) (in-order (tree :l)) (in-order (tree :r))))
+       flatten
+       (remove nil?)))
+
+(defn in-order
+  "with builtin function tree-seq"
+  [tree]
+  (->>  (tree-seq identity #(map % [:l :r]) tree)
+        (remove nil?)
+        (map :v)))
+
+(defn look-up
+  "loolup in a BST"
+  ([tree v] (look-up tree v nil))
+  ([tree v  not-found]
+     (if tree
+       (case (compare v (tree :v))
+         1 (recur (tree :r) v not-found)
+         -1 (recur (tree :l) v not-found)
+         0 (tree :v))
+       not-found)))
