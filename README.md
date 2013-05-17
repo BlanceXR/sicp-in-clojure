@@ -1,5 +1,5 @@
-
-# sicp
+sicp-in-clojure
+===============
 my answer to exersices in sicp (work in progress).
 
 
@@ -12,9 +12,8 @@ well, they are listed under src/sicp directory.
 Copyright © 2013 
 
 Distributed under the Eclipse Public License, the same as Clojure.
-=======
-sicp-in-clojure
-===============
+
+
 
 
 
