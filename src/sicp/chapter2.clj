@@ -11,8 +11,10 @@
             [clojure.tools.trace :refer :all]
             [incanter.infix :refer :all]
             [clojure.pprint :refer :all]
-            [clojure.repl :refer :all]))
+            [clojure.repl :refer :all]
+            [clojure.zip :as zip]))
 
+(set! *warn-on-reflection* true)
 
 ;;ex 2.1
 (defn make-rat
@@ -281,36 +283,22 @@
       0 tree
       1 (assoc tree :r (insert (:r tree) v)))))
 
-(defn next-root
-  "find the node in tree that is the next biggest in tree"
-  [tree]
-  (if-not (or (tree :r) (tree :l)) (tree :v)
-          (next-root (tree :l))))
+(defn find-min [tree]
+  (if (tree :l)
+    (recur (tree :l))
+    (tree :v)))
 
 (defn rm-node
   "remove node from tree"
   [tree v]
-  (if (nil? tree)
-    tree
+  (if-not (nil? tree)
     (case (compare v (tree :v))
       -1 (assoc tree :l (rm-node (:l tree) v)) ;;insert left if smaller than
       1 (assoc tree :r (rm-node (:r tree) v))  ;;insert right if greater than
-      0 (if-not (tree :r)        ;;if tree right is empty,
-          (tree :l)              ;;return left
-          (if-not ((tree :r) :l) ;;if right tree left branch is empty
-            (assoc (tree :r) :l (tree :l))  ;conj the left to right's left
-            (assoc tree                 ;otherwise swap next root up
-              :v (next-root (tree :r))
-              :l (tree :l)
-              :r (rm-node (tree :r))))))))
-
-(defn in-order
-  "traverse a tree in orderly"
-  [tree]
-  (->> (if tree
-         (list (tree :v) (in-order (tree :l)) (in-order (tree :r))))
-       flatten
-       (remove nil?)))
+      0 (if-not (tree :r)                      ;;if tree right is empty,
+          (tree :l)                            ;;return left
+          (let [min (find-min (tree :r))]    ;otherwise swap next root up
+            (assoc tree :v min :r (rm-node (tree :r) min)))))))
 
 (defn in-order
   "with builtin function tree-seq"
@@ -329,3 +317,68 @@
          -1 (recur (tree :l) v not-found)
          0 (tree :v))
        not-found)))
+
+;; ex 2.67
+(defn make-leaf
+  "make a huffman leaf"
+  [symbol weight]
+  {:leaf? true :s  symbol :w weight})
+
+(defn make-code-tree
+  [left right]
+  {:l left :r right
+   :s (flatten (hash-set (:s left) (:s right)))
+   :w (+ (:w left) (:w right))})
+(defn choose-branch
+  [bit branch]
+  (cond (= bit 0) (:l branch)
+        (= bit 1) (:r branch)
+        :else (println "error orrured")))
+(defn decode
+  "decode the tree with bits"
+  [bits tree]
+  (letfn [(decode-1 [bits current-branch]
+            (if-not (seq bits)
+              '()
+              (let [next-branch (choose-branch (first bits) current-branch)]
+                (if (:leaf? next-branch)
+                  (cons (:s next-branch)
+                        (decode-1 (rest bits) tree))
+                  (recur (rest bits) next-branch)))))]
+    (decode-1 bits tree)))
+
+
+
+(defn make-leaf-set
+  "make a sorted-set by built in clojure function assuming there won't
+  be duplicate symbol"
+  [pairs]
+  (apply sorted-set-by
+         (fn [p1 p2] (case (compare (second p1) (second p2))
+                       0 (compare (first p1) (first p2))
+                       -1 1
+                       1 -1))
+         pairs))
+
+(def sample-tree
+  (make-code-tree (make-leaf 'A 4)
+                  (make-code-tree
+                   (make-leaf 'B 2)
+                   (make-code-tree (make-leaf 'D 1)
+                                   (make-leaf 'C 1)))))
+(def sample-message '(0 1 1 0 0 1 0 1 0 1 1 1 0))
+
+(decode sample-message sample-tree)
+;=> (A D A B B C A)
+
+;; ex 2.68
+(def s-tree (zip/zipper #(not (:leaf? %))
+                        (fn [node] (list (:l node) (:r node)))
+                        (fn [node children] (assoc node :l (first children)
+                                                   :r (second children)))
+;                        identity
+                        sample-tree))
+(defn encode-symbol
+  "encode an symbol with given tree."
+  [symbol tree]
+  )
