@@ -322,12 +322,12 @@
 (defn make-leaf
   "make a huffman leaf"
   [symbol weight]
-  {:leaf? true :s  symbol :w weight})
+  {:leaf? true :s #{symbol} :w weight})
 
 (defn make-code-tree
   [left right]
   {:l left :r right
-   :s (flatten (hash-set (:s left) (:s right)))
+   :s (into (:s left) (:s right))
    :w (+ (:w left) (:w right))})
 (defn choose-branch
   [bit branch]
@@ -342,7 +342,7 @@
               '()
               (let [next-branch (choose-branch (first bits) current-branch)]
                 (if (:leaf? next-branch)
-                  (cons (:s next-branch)
+                  (cons (first (:s next-branch))
                         (decode-1 (rest bits) tree))
                   (recur (rest bits) next-branch)))))]
     (decode-1 bits tree)))
@@ -371,14 +371,23 @@
 (decode sample-message sample-tree)
 ;=> (A D A B B C A)
 
+
 ;; ex 2.68
 (def s-tree (zip/zipper #(not (:leaf? %))
                         (fn [node] (list (:l node) (:r node)))
                         (fn [node children] (assoc node :l (first children)
                                                    :r (second children)))
-;                        identity
                         sample-tree))
 (defn encode-symbol
   "encode an symbol with given tree."
   [symbol tree]
-  )
+  (letfn [(helper [symbol tree acc]
+            (when ((:s tree) symbol)
+              (if (:leaf? tree)
+                acc
+                (cond ((:s (:l tree)) symbol) (recur symbol (:l tree) (conj acc 0))
+                      ((:s (:r tree)) symbol) (recur symbol (:r tree) (conj acc 1))
+                      :else symbol))))]
+    (helper symbol tree [])))
+
+(defn encode [tree msg] (mapcat #(encode-symbol % tree) msg))
