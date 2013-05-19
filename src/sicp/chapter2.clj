@@ -346,20 +346,6 @@
                         (decode-1 (rest bits) tree))
                   (recur (rest bits) next-branch)))))]
     (decode-1 bits tree)))
-
-
-
-(defn make-leaf-set
-  "make a sorted-set by built in clojure function assuming there won't
-  be duplicate symbol"
-  [pairs]
-  (apply sorted-set-by
-         (fn [p1 p2] (case (compare (second p1) (second p2))
-                       0 (compare (first p1) (first p2))
-                       -1 1
-                       1 -1))
-         pairs))
-
 (def sample-tree
   (make-code-tree (make-leaf 'A 4)
                   (make-code-tree
@@ -379,7 +365,7 @@
                                                    :r (second children)))
                         sample-tree))
 (defn encode-symbol
-  "encode an symbol with given tree."
+  "encode an symbol with given tree. nil if not in the tree"
   [symbol tree]
   (letfn [(helper [symbol tree acc]
             (when ((:s tree) symbol)
@@ -391,3 +377,31 @@
     (helper symbol tree [])))
 
 (defn encode [tree msg] (mapcat #(encode-symbol % tree) msg))
+
+;; ex 2.69
+(defn make-leaf-set
+  "make a sorted-set by built in clojure function assuming there won't
+  be duplicate symbol"
+  [pairs]
+  (let [pairs-map (map (fn [[s w]] {:leaf? true :s #{s} :w w}) pairs)]
+    (apply sorted-set-by
+           (fn [p1 p2] (case (compare (:w p1) (:w p2))
+                         0 (compare (first (:s p1)) (first (:s p2)))
+                         1 1
+                         -1 -1))
+           pairs-map)))
+
+(defn generate-huffman-tree
+  "giving a sequence of pairs with symbol and its frequence, generate
+  the correspoding huffman tree. ie. [(A 3) (B 4)]. Need at least two pairs"
+  [pairs]
+  (if (= 1 (count pairs))
+    (first pairs)
+    (let [p1 (first pairs)
+          p2 (second pairs)
+          new-pairs (conj (disj pairs p1 p2) (make-code-tree p1 p2))]
+      (recur new-pairs))))
+;;; ex 2.70
+(def pairs '[[A 2] [NA 16] [BOOM 1] [SHA 3] [GET 2] [YIP 9] [JOB 2] [WAH 1]])
+(def message '(GET A JOB SHA NA NA NA NA NA NA NA NA GET A JOB SHA NA NA NA NA NA NA NA NA WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP SHA BOOM))
+(encode a-tree message)
