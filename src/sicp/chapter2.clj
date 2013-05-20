@@ -7,9 +7,9 @@
             [clojure.core.matrix.operators :refer :all ]
             [alembic.still :as deps]
             [clojure.math.combinatorics :as combo]
-;            [clojure.math.numeric-tower :exclude [sqrt] :refer :all]
+            [clojure.math.numeric-tower :exclude [sqrt] :refer :all]
             [clojure.tools.trace :refer :all]
-            [incanter.infix :refer :all]
+;            [incanter.infix :refer :all]
             [clojure.pprint :refer :all]
             [clojure.repl :refer :all]
             [clojure.zip :as zip]))
@@ -152,7 +152,7 @@
   "place n queens in board with size rxn"
   [[r n]]
   (letfn [(queen-cols [k]
-            (if (== k 0)
+            (if (zero? k)
               [[]]
               (filter ;; #(and % true)
                (fn [pos] (safe? k pos))
@@ -161,24 +161,24 @@
                   (map (fn [new-row]
                          (conj rest-of-queens [new-row k]))
                        (range 1 (inc n))))
-                (queen-cols (- k 1))))))]
+                (queen-cols (dec k))))))]
     (queen-cols n)))
 
 
 ;;ex2.56 & 2.57
 (defn do-sum [a b & xs]
-  (if (< 0 (count xs))
+  (if (pos? (count xs))
     (apply list '+ (do-sum a b) xs)
     (cond (and (number? a) (number? b)) (+ a b)
-          (= a 0) b
-          (= b 0) a
+          (zero? a) b
+          (zero? b) a
           :else (list '+ a b))))
 
 (defn do-product [a b & xs]
-  (if (< 0 (count xs))
+  (if (pos? (count xs))
     (apply list '* (do-product a b) xs)
     (cond (and (number? a) (number? b)) (* a b)
-          (or (= a 0) (= b 0)) 0
+          (or (zero? a) (zero? b)) 0
           (= a 1) b
           (= b 1) a
           :else ( list '* a b))))
@@ -201,7 +201,7 @@
   "expo"
   [a b]
   (cond (= 1 b) a
-        (= 0 b) 1
+        (zero? b) 1
         :else (list \^ a b)))
 
 (defn base [exp] (second exp))
@@ -275,7 +275,19 @@
 ;;my take of binary tree implementation
 (defn make-tree [v] {:v v :l nil :r nil})
 
-(defn insert [tree v]
+(defn insert
+  "more idiomatic way but can only insert (range 220)"
+  [tree v]
+  (if (nil? tree)
+    (make-tree v)
+    (case (compare v (tree :v))
+      -1 (update-in tree [:l] insert v)
+      0 tree
+      1 (update-in tree [:r] insert v))))
+
+(defn insert
+  "less idomatic way but acn insert up to (range 3000)"
+  [tree v]
   (if (nil? tree)
     (make-tree v)
     (case (compare v (tree :v))
@@ -293,8 +305,8 @@
   [tree v]
   (if-not (nil? tree)
     (case (compare v (tree :v))
-      -1 (assoc tree :l (rm-node (:l tree) v)) ;;insert left if smaller than
-      1 (assoc tree :r (rm-node (:r tree) v))  ;;insert right if greater than
+      -1 (update-in tree [:l] rm-node v) ;;insert left if smaller than
+      1  (update-in tree [:r] rm-node v);;insert right if greater than
       0 (if-not (tree :r)                      ;;if tree right is empty,
           (tree :l)                            ;;return left
           (let [min (find-min (tree :r))]    ;otherwise swap next root up
@@ -331,7 +343,7 @@
    :w (+ (:w left) (:w right))})
 (defn choose-branch
   [bit branch]
-  (cond (= bit 0) (:l branch)
+  (cond (zero? bit) (:l branch)
         (= bit 1) (:r branch)
         :else (println "error orrured")))
 (defn decode
@@ -373,7 +385,7 @@
                 acc
                 (cond ((:s (:l tree)) symbol) (recur symbol (:l tree) (conj acc 0))
                       ((:s (:r tree)) symbol) (recur symbol (:r tree) (conj acc 1))
-                      :else symbol))))]
+                      :else (println "imposible!")))))]
     (helper symbol tree [])))
 
 (defn encode [tree msg] (mapcat #(encode-symbol % tree) msg))
@@ -404,4 +416,18 @@
 ;;; ex 2.70
 (def pairs '[[A 2] [NA 16] [BOOM 1] [SHA 3] [GET 2] [YIP 9] [JOB 2] [WAH 1]])
 (def message '(GET A JOB SHA NA NA NA NA NA NA NA NA GET A JOB SHA NA NA NA NA NA NA NA NA WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP SHA BOOM))
-(encode a-tree message)
+
+;;; ex 2.71
+(defn expo-tree
+  "take first n from alphabet with 1 2 4 2^n frequencies"
+  [n]
+  (let [alphabet (map char (range 97 123))
+        pairs (map (fn [ch idx] [ch (expt 2 idx)]) alphabet (range))
+        leafs (make-leaf-set (take n pairs))]
+    (generate-huffman-tree  leafs)))
+
+;;; ex 2.72
+;;; best case O(1), worst case O(n). evenly distributed.
+;;; average O(n)
+
+;;;
