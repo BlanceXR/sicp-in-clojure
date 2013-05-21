@@ -170,15 +170,15 @@
   (if (pos? (count xs))
     (apply list '+ (do-sum a b) xs)
     (cond (and (number? a) (number? b)) (+ a b)
-          (zero? a) b
-          (zero? b) a
+          (= 0 a) b
+          (= 0 b) a
           :else (list '+ a b))))
 
 (defn do-product [a b & xs]
   (if (pos? (count xs))
     (apply list '* (do-product a b) xs)
     (cond (and (number? a) (number? b)) (* a b)
-          (or (zero? a) (zero? b)) 0
+          (or (= 0 a) (= 0 b)) 0
           (= a 1) b
           (= b 1) a
           :else ( list '* a b))))
@@ -430,4 +430,37 @@
 ;;; best case O(1), worst case O(n). evenly distributed.
 ;;; average O(n)
 
+;;; ex 2.73
+;;; put == assoc-in (or assoc!)
+;;; get == get-in
+
+(defn d-sum
+  "do-sum table version"
+  [exps var]
+  (apply do-sum (map #(deriv1 % var) exps)))
+
+
+(defn d-product
+  "do-product table version"
+  [exps var]
+  (do-sum (do-product (first exps)
+                      (deriv1 (second exps) var))
+          (do-product (second exps)
+                      (deriv1 (first exps) var))))
+
+(def op-table (assoc-in
+               (assoc-in {} [:deriv '+] d-sum)
+               [:deriv '*] d-product))
+
+
+
+
+(defn deriv1
+  "derivative of exp and var"
+  [exp var]
+  {:pre [(symbol? var)]}
+  (cond (number? exp) 0
+        (symbol? exp) (if (= exp var) 1 0)
+        :else (let [op (get-in op-table [:deriv (first exp)])]
+                (op (rest exp) var))))
 ;;;
