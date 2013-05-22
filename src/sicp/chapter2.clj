@@ -463,4 +463,24 @@
         (symbol? exp) (if (= exp var) 1 0)
         :else (let [op (get-in op-table [:deriv (first exp)])]
                 (op (rest exp) var))))
-;;;
+
+
+;;; ex 2.75
+(defn make-from-mag-ang
+  "make complex number from supplied magnitude and angle"
+  [mag ang]
+  (letfn [(dispatch [op]
+            (condp = op
+              'real-part (* mag (Math/cos ang))
+              'img-part (* mag (Math/sin ang))
+              'magnitude mag
+              'angle ang
+              :else (println "wrong op provided")))]
+    dispatch))
+
+
+;;; ex 2.76
+;;; reference : wizardbook.wordpress.com/2010/12/08/ exercise-2-76/
+;;; when lots of new operation is needed, data-directed is better. when new type is
+;;; needed, either is fine. since they both need to insert new procedure for added
+;;; operation, and new procedure for added types.
