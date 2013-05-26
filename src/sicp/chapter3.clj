@@ -72,3 +72,61 @@
               (reset! y x)
               z))))
 (def f (g 0))
+
+
+;;; ex 3.23
+;;; from https://gist.github.com/111147/548905621ef0ccdd6406ea3959a594cfd5956518
+;;; by achim
+(defn- inner-pop [i end]
+  (condp = end
+    :left  (subvec i 1)
+    :right (pop i)))
+
+(defn- inner-peek [i end]
+  (condp = end
+    :left  (first i)
+    :right (peek i)))
+
+(defn- inner-push [i x end]
+  (condp = end
+    :left  (vec (cons x i))
+    :right (conj i x)))
+
+(def empty-deque {})
+
+(defn dpeek [d end]
+  (cond (empty? d)  nil
+        (:single d) (:single d)
+        :else       (inner-peek (end d) end)))
+
+
+(defn dpush [d x end]
+  (let [order     ({:left identity, :right reverse} end)
+        other-end ({:left :right :right :left} end)]
+    (cond
+      (empty? d)            {:single x}
+      (:single d)           {end [x], :middle empty-deque, other-end [(:single d)]}
+      (< (count (end d)) 4) (assoc d end (inner-push (end d) x end))
+      :else                 (assoc d
+                              end     (vec (order [x (inner-peek (end d) end)]))
+                              :middle (dpush (:middle d) (inner-pop (end d) end) end)))))
+
+
+(defn dpop [d end]
+  (let [other-end ({:left :right :right :left} end)]
+    (cond
+      (empty? d)                  d
+      (:single d)                 empty-deque
+      (> (count (end d)) 1)       (assoc d end (inner-pop (end d) end))
+      (not (empty? (:middle d)))  (assoc d
+                                    end     (dpeek (:middle d) end)
+                                    :middle (dpop (:middle d) end))
+      (> (count (other-end d)) 1) (assoc d
+                                    end       [(inner-peek (other-end d) end)]
+                                    other-end (inner-pop (other-end d) end))
+      :else                       {:single (inner-peek (other-end d) end)})))
+
+(defn dseq [d]
+  (lazy-seq
+    (when-not (empty? d)
+      (cons (dpeek d :left) (dseq (dpop d :left))))))
