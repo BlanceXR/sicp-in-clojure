@@ -2,16 +2,26 @@
   "Short package description."
   (:refer-clojure :exclude [== + * / -])
   (:require [clojure.core :as core]
-            [criterium.core]
-            [clojure.core.matrix :as matrix]
-            [clojure.core.matrix.operators :refer :all ]
+            [criterium.core :as c]
+            [clojure.core.matrix :as m]
+            [clojure.core.matrix.operators :as mop ]
             [alembic.still :as deps]
             [clojure.math.combinatorics :as combo]
             [clojure.math.numeric-tower :exclude [sqrt] :refer :all]
             [clojure.tools.trace :refer :all]
             [clojure.pprint :refer :all]
             [clojure.repl :refer :all]
-            [clojure.zip :as zip]))
+            [clojure.zip :as zip]
+            [incanter.core :as ic])
+  (:import (cern.colt.matrix.linalg.Algebra)
+           (incanter Matrix)
+           (cern.colt.matrix.tdouble.algo DoubleFormatter)
+           (cern.jet.math.tdouble DoubleFunctions DoubleArithmetic)
+           (cern.colt.function.tdouble DoubleDoubleFunction DoubleFunction)
+           (cern.colt.matrix)
+           (cern.colt.matrix.tdouble DoubleMatrix2D
+                                     DoubleFactory2D
+                                     DoubleFactory1D)))
 
 ;;; ex 3.1
 (defn make-accumulator
@@ -130,3 +140,38 @@
   (lazy-seq
     (when-not (empty? d)
       (cons (dpeek d :left) (dseq (dpop d :left))))))
+
+;;; ex 3.24
+(define (make-table)
+  (let [local-table (list '*table*)]
+    (letfn [(lookup [key-1 key-2]
+              (let ((subtable (assoc key-1 (rest local-table))))
+                (if subtable
+                  (let ((record (assoc key-2 (rest subtable))))
+                    (if record
+                      (rest record)
+                      nil))
+                  nil)))
+            (insert! [key-1 key-2 value]
+              (let ((subtable (assoc key-1 (rest local-table))))
+                (if subtable
+                  (let ((record (assoc key-2 (rest subtable))))
+                    (if record
+                      (set-cdr! record value)
+                      (set-cdr! subtable
+                                (cons (cons key-2 value)
+                                      (cdr subtable)))))
+                  (set-cdr! local-table
+                            (cons (list key-1
+                                        (cons key-2 value))
+                                  (cdr local-table))))))
+            'ok])
+    (define (dispatch m)
+      (cond ((eq? m 'lookup-proc) lookup)
+            ((eq? m 'insert-proc!) insert!)
+            (else (error "Unknown operation -- TABLE" m))))
+    dispatch))
+
+
+(defn make-table [same-key?]
+  (partial sorted-map-by same-key?))
