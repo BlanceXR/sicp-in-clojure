@@ -10,10 +10,12 @@
                  [org.clojure/math.combinatorics "0.0.4"]
                  [org.clojure/math.numeric-tower "0.0.2"]
                  [org.clojure/tools.trace "0.7.5"]
-                 [incanter "1.4.1"]]
+                 [incanter "1.4.1"]
+                 [colt "1.2.0"]]
   :dev-dependencies [[alembic "0.1.1"]]
   ;;TODO: edit if going to run long time
   :jvm-opts ["-XX:+TieredCompilation" "-XX:TieredStopAtLevel=1"]
   :bootclasspath true
   :profiles {:dev
-             {:dependencies [[alembic "0.1.1"]]}})
+             {:dependencies [[alembic "0.1.1"]]}}
+  :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))})
