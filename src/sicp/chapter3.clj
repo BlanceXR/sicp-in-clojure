@@ -141,27 +141,19 @@
   (partial sorted-map-by same-key?))
 
 ;;; ex 3.27
-(define (memoize f)
-  (let ((table (make-table)))
-    (lambda (x)
-            (let ((previously-computed-result (lookup x table)))
-              (or previously-computed-result
-                  (let ((result (f x)))
-                    (insert! x result table)
-                    result))))))
-
 (defn memoize-sicp
   "see core function : memoiza"
   [f]
   (let [table (atom {})]
-    (fn [& x] (let [previously-computed-result (x @table)]
+    (fn [& x] (let [previously-computed-result (@table x)]
               (or previously-computed-result
                   (let [result (apply f x)]
-                    (swap! table assoc x result)))))))
+                    (swap! table assoc x result)
+                    result))))))
 
 (def memo-fib
-  (memoize (fn [n]
-             (cond (= n 0) 0
-                   (= n 1) 1
-                   :else (+ (memo-fib (- n 1))
-                            (memo-fib (- n 2)))))))
+  (memoize-sicp (fn [n]
+                  (cond (= n 0) 0
+                        (= n 1) 1
+                        :else (+ (memo-fib (- n 1))
+                                 (memo-fib (- n 2)))))))
