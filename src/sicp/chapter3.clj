@@ -157,3 +157,147 @@
                         (= n 1) 1
                         :else (+ (memo-fib (- n 1))
                                  (memo-fib (- n 2)))))))
+
+;;; ex 3.29
+(defn call-each [procedures]
+  (if-not procedures
+    :done
+    (do
+     ((first procedures))
+     (recur (next procedures)))))
+
+(defn make-wire
+  "make a wire for logical circuit"
+  []
+  (let [signal-value (atom 0)
+        action-procedures (atom [])]
+    (letfn [(set-my-signal! [new-value]
+              (if-not (= signal-value new-value)
+                (do (reset! signal-value new-value)
+                    (call-each action-procedures))
+                :done))
+            (accept-action-procedure! [proc]
+              (swap! action-procedures conj proc)
+              (proc))
+            (dispatch [m]
+              (condp = m
+                :get-signal signal-value
+                :set-signal! set-my-signal!
+                :add-action! accept-action-procedure!))]
+      dispatch)))
+
+(defn get-signal [wire]
+  (wire :get-signal))
+(defn set-signal! [wire new-value]
+  ((wire :set-signal!) new-value))
+(defn add-action! [wire action-procedure]
+  ((wire :add-action!) action-procedure))
+
+(defn add-to-agenda! [time action agenda]
+  (letfn [(belongs-before? [segments]
+            (or (null? segments)
+                (< time (segment-time (first segments)))))
+          (make-new-time-segment [time action]
+            (let [q (atom [])]
+              (swap! q conj action)
+              (make-time-segment time q)))
+          (add-to-segments! [segments]
+             (if (= (segment-time (first segments)) time)
+               (swap! (segment-queue (first segments))
+                              conj action)
+               (let [rest-s (next segments)]
+                    (if (belongs-before? rest-s)
+                      (set-cdr!
+                       segments
+                       (cons (make-new-time-segment time action)
+                             (cdr segments)))
+                      (add-to-segments! rest)))))])
+  (let ((segments (segments agenda)))
+    (if (belongs-before? segments)
+      (set-segments!
+       agenda
+       (cons (make-new-time-segment time action)
+             segments))
+      (add-to-segments! segments))))
+
+(defn after-delay [delay action]
+  (add-to-agenda! (+ delay (current-time the-agenda))
+                  action
+                  the-agenda))
+
+(defn propagate []
+  (if (empty-agenda? the-agenda)
+    :done
+    (let [first-item (first-agenda-item the-agenda)]
+      (first-item)
+      (remove-first-agenda-item! the-agenda)
+      (recur))))
+
+(defn inverter [input output]
+  (letfn [(invert-input []
+             (let [new-value (bit-not (get-signal input))]
+               (after-delay inverter-delay
+                            #(set-signal! output new-value))))]
+    (add-action! input invert-input))
+  :ok)
+
+
+(defn and-gate [a1 a2 out]
+  (letfn [(and-action-procedure []
+            (let [new-value (bit-and (get-signal a1)
+                                     (get-signal a2))]
+              (after-delay and-gate-delay
+                           #(set-signal! out new-value))))])
+  (add-action! a1 and-action-procedure)
+  (add-action! a2 and-action-procedure)
+  :ok)
+
+(defn or-gate [a1 a2 out]
+  (letfn [(or-action-procedure []
+            (let [new-value (bit-or (get-signal a1)
+                                    (get-signal a2))]
+              (after-delay or-gate-delay
+                           #(set-signal! out new-value))))])
+  (add-action! a1 or-action-procedure)
+  (add-action! a2 or-action-procedure)
+  :ok)
+
+;;; ex 3.30
+(defn or-gate
+  "constructed from and-gate and inverter"
+  [a1 a2 output]
+  (let [c1 (make-wire)
+        c2 (make-wire)
+        c3 (make-wire)]
+    (inverter a1 c1)
+    (inverter a2 c2)
+    (and-gate c1 c2 c3)
+    (inverter c3 output)))
+
+;;; ex 3.31
+(defn half-adder [a b s c]
+  (let [d (make-wire)
+        e (make-wire)]
+    (or-gate a b d)
+    (and-gate a b c)
+    (inverter c e)
+    (and-gate d e s)
+    :ok))
+
+(defn full-adder [a b c-in sum c-out]
+  (let [s (make-wire)
+        c1 (make-wire)
+        c2 (make-wire)]
+    (half-adder b c-in s c1)
+    (half-adder a s sum c2)
+    (or-gate c1 c2 c-out)
+    :ok))
+
+(defn ripple-carry-adder
+  "sum n bits"
+  [as bs ss c]
+  (let [c1 (atom 0)])
+  (map #(full-adder %1 %2 c1 %3 c1)
+       as bs ss)
+  (set-signal! c c1)
+  :ok)
